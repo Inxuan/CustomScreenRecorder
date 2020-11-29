@@ -33,6 +33,9 @@ public class MainActivity extends AppCompatActivity {
     private int density = 0;
     private static final String TAG = "creatingMediaRecorder";
     private TextView textView;
+    private Button button;
+    private boolean isStarted = false;
+    private boolean firstTime =true;
 
 
     @Override
@@ -43,10 +46,13 @@ public class MainActivity extends AppCompatActivity {
         width = metrics.widthPixels;
         height =metrics.heightPixels;
         density = metrics.densityDpi;
-        textView = (TextView) findViewById(R.id.tv);
 
         manager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
         Intent captureIntent = manager.createScreenCaptureIntent();
+
+        //textView = (TextView) findViewById(R.id.tv);
+        //button =(Button)findViewById(R.id.startbutton);
+
 
         startActivityForResult(captureIntent, RECORD_CODE);
         setContentView(R.layout.activity_main);
@@ -54,18 +60,36 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    public  void onClick(View view){
+        if(!isStarted){
+            Log.i(TAG, "start");
+            mediaRecorder.start();
+        }
+        else{
+            Log.i(TAG, "else");
+            mediaRecorder.stop();
+            mediaRecorder.release();
+            this.finish();
+        }
+
+    }
+
+
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        MediaProjection  mp =manager.getMediaProjection(resultCode,data);
-
-
-        MediaRecorder mediaRecorder =createMediaRecorder();
-        vd = mp.createVirtualDisplay("recorder",width,height,density, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                mediaRecorder.getSurface(),null,null);
-        mediaRecorder.start();
+        if(firstTime) {
+            firstTime=false;
+            Log.i(TAG, "!!!!!!######");
+            MediaProjection mp = manager.getMediaProjection(resultCode, data);
+            mediaRecorder = createMediaRecorder();
+            vd = mp.createVirtualDisplay("recorder", width, height, density, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
+                    mediaRecorder.getSurface(), null, null);
+            Log.i(TAG, "!!!!!!!!!!!!!!");
+        }
         //WindowManager w = (WindowManager) new WindowManager.LayoutParams(WindowManager.LayoutParams.TYPE_TOAST);
-        mediaRecorder.stop();
-        mediaRecorder.release();
+
+
+
     }
 
     private MediaRecorder createMediaRecorder() {
@@ -80,9 +104,10 @@ public class MainActivity extends AppCompatActivity {
         //if(isAudio) mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mediaRecorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) + "/" + videoQuality + curTime + ".mp4");
-        mediaRecorder.setVideoSize(width, height);  //after setVideoSource(), setOutFormat()
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);  //after setOutputFormat()
+        mediaRecorder.setVideoSize(width, height);  //after setVideoSource(), setOutFormat()
+        mediaRecorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) + "/" + videoQuality + curTime + ".mp4");
+
         //if(isAudio) mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);  //after setOutputFormat()
         int bitRate;
         if(isVideoSd) {
@@ -104,7 +129,6 @@ public class MainActivity extends AppCompatActivity {
 
         return mediaRecorder;
     }
-
 
     @Override
     public void onDestroy() {
