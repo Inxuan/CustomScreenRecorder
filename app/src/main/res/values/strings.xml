@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">CustomScreenRecorder</string>
     <string name="StringButton">Button</string>
+    <string name="my_video">My Video</string>
+    <string name="home">Home</string>
 </resources>

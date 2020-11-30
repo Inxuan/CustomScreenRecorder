@@ -7,34 +7,13 @@
 
     tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/tv"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <Button
-        android:id="@+id/startbutton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="start"
-        android:onClick="onClick2"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintVertical_bias="0.588" />
 
     <Button
         android:id="@+id/viewButton"
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:onClick="onClickView"
-        android:text="My Video"
+        android:text="@string/my_video"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintHorizontal_bias="0.797"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -47,7 +26,7 @@
         android:layout_width="120dp"
         android:layout_height="wrap_content"
         android:onClick="onClickHome"
-        android:text="Home"
+        android:text="@string/home"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintHorizontal_bias="0.225"
         app:layout_constraintLeft_toLeftOf="parent"
@@ -56,3 +35,4 @@
         app:layout_constraintVertical_bias="0.023" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
+

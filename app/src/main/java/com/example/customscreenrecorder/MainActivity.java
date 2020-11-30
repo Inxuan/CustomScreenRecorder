@@ -24,8 +24,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.MediaController;
 import android.widget.TextView;
 
+import android.widget.VideoView;
 import java.io.IOException;
 import java.security.spec.ECField;
 import java.text.SimpleDateFormat;
@@ -51,6 +53,11 @@ public class MainActivity extends AppCompatActivity {
     private View windowView;
     private WindowManager windowManager;
     private SensorManager sensor;
+    private VideoView videoView;
+    private Button btn_start,btn_end;
+    private MediaController mediaController;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -159,8 +166,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
+    public void onClickView(View view) {
+        setContentView(R.layout.view_video);
 
+    }
 
-
-
+    public void onClickHome(View view) {
+        setContentView(R.layout.activity_main);
+    }
 }
