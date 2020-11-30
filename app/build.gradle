@@ -8,8 +8,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.customscreenrecorder"
-        minSdkVersion 24
-        targetSdkVersion 30
+        minSdkVersion 22
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
 

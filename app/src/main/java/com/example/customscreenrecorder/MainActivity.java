@@ -2,21 +2,32 @@ package com.example.customscreenrecorder;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Context;
 import android.content.Intent;
+import android.graphics.PixelFormat;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.VirtualDisplay;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.security.spec.ECField;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -36,8 +47,10 @@ public class MainActivity extends AppCompatActivity {
     private Button button;
     private boolean isStarted = false;
     private boolean firstTime =true;
-
-
+    private Button window;
+    private View windowView;
+    private WindowManager windowManager;
+    private SensorManager sensor;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -47,44 +60,97 @@ public class MainActivity extends AppCompatActivity {
         height =metrics.heightPixels;
         density = metrics.densityDpi;
 
-        manager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
-        Intent captureIntent = manager.createScreenCaptureIntent();
+        //sensor.unregisterListener(shakelistener);
 
-        //textView = (TextView) findViewById(R.id.tv);
-        //button =(Button)findViewById(R.id.startbutton);
-
-
-        startActivityForResult(captureIntent, RECORD_CODE);
         setContentView(R.layout.activity_main);
+        //textView = (TextView) findViewById(R.id.tv);
+        button =(Button)findViewById(R.id.startbutton);
+
         //windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        //setContentView(R.layout.window);
+
+
+        //button = (Button)findViewById(R.id.bt_play);
+        //setContentView(R.layout.activity_main);
+        //windowManager.removeView(windowView);
+
+    }
+
+    public void createWindow(){
+        windowManager= (WindowManager) getSystemService(Context.WINDOW_SERVICE);
+        //设置悬浮窗布局属性
+        final WindowManager.LayoutParams layoutParams=new WindowManager.LayoutParams();
+        //设置类型
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+            layoutParams.type=WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        }else {
+            layoutParams.type=WindowManager.LayoutParams.TYPE_PHONE;
+        }
+        //设置行为选项
+        layoutParams.flags=WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        //设置悬浮窗的显示位置
+        layoutParams.gravity= Gravity.LEFT;
+        //设置x周的偏移量
+        layoutParams.x=0;
+        //设置y轴的偏移量
+        layoutParams.y=0;
+        //如果悬浮窗图片为透明图片，需要设置该参数为PixelFormat.RGBA_8888
+        layoutParams.format= PixelFormat.RGBA_8888;
+        //设置悬浮窗的宽度
+        layoutParams.width=WindowManager.LayoutParams.WRAP_CONTENT;
+        //设置悬浮窗的高度
+        layoutParams.height=WindowManager.LayoutParams.WRAP_CONTENT;
+        //设置悬浮窗的布局
+        windowView= LayoutInflater.from(this).inflate(R.layout.window,null);
+        //加载显示悬浮窗
+        windowManager.addView(windowView,layoutParams);
+    }
+
+    public void onClick2(View view){
+        Intent intent=new Intent(Intent.ACTION_MAIN);
+        intent.addCategory(Intent.CATEGORY_HOME);
+        startActivity(intent);
+        createWindow();
     }
 
 
     public  void onClick(View view){
         if(!isStarted){
             Log.i(TAG, "start");
-            mediaRecorder.start();
+            //((Button)view).setText("Stop");
+            windowManager.removeView(windowView);
+            manager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
+            Intent captureIntent = manager.createScreenCaptureIntent();
+            startActivityForResult(captureIntent, RECORD_CODE);
+            isStarted=true;
         }
-        else{
+    /*    else{
+            ((Button)view).setText("Start");
             Log.i(TAG, "else");
-            mediaRecorder.stop();
-            mediaRecorder.release();
+            Intent service = new Intent(this,RecorderService.class);
+            stopService(service);
+            isStarted = false;
+
             this.finish();
         }
-
+    */
     }
 
 
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(firstTime) {
-            firstTime=false;
-            Log.i(TAG, "!!!!!!######");
-            MediaProjection mp = manager.getMediaProjection(resultCode, data);
-            mediaRecorder = createMediaRecorder();
-            vd = mp.createVirtualDisplay("recorder", width, height, density, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR,
-                    mediaRecorder.getSurface(), null, null);
-            Log.i(TAG, "!!!!!!!!!!!!!!");
+        if(requestCode == RECORD_CODE){
+            if(resultCode ==RESULT_OK) {
+                moveTaskToBack(true);
+                Intent service = new Intent(this, RecorderService.class);
+                service.putExtra("resultCode", resultCode);
+                service.putExtra("data", data);
+                service.putExtra("width", width);
+                service.putExtra("height", height);
+                service.putExtra("density", density);
+                startService(service);
+                //service.putExtra("resultCode",resultCode);
+            }
         }
         //WindowManager w = (WindowManager) new WindowManager.LayoutParams(WindowManager.LayoutParams.TYPE_TOAST);
 
@@ -92,63 +158,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    private MediaRecorder createMediaRecorder() {
-        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
-        Date curDate = new Date(System.currentTimeMillis());
-        String curTime = formatter.format(curDate).replace(" ", "");
-        String videoQuality = "HD";
-        if(isVideoSd) videoQuality = "SD";
 
-        Log.i(TAG, "Create MediaRecorder");
-        MediaRecorder mediaRecorder = new MediaRecorder();
-        //if(isAudio) mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
-        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
-        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);  //after setOutputFormat()
-        mediaRecorder.setVideoSize(width, height);  //after setVideoSource(), setOutFormat()
-        mediaRecorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) + "/" + videoQuality + curTime + ".mp4");
 
-        //if(isAudio) mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);  //after setOutputFormat()
-        int bitRate;
-        if(isVideoSd) {
-            mediaRecorder.setVideoEncodingBitRate(width * height);
-            mediaRecorder.setVideoFrameRate(30);
-            bitRate = width * height / 1000;
-        } else {
-            mediaRecorder.setVideoEncodingBitRate(5 * width * height);
-            mediaRecorder.setVideoFrameRate(60); //after setVideoSource(), setOutFormat()
-            bitRate = 5 * width * height / 1000;
-        }
-        try {
-            mediaRecorder.prepare();
-        } catch (IllegalStateException | IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
-        Log.i(TAG, "Audio: " + isAudio + ", SD video: " + isVideoSd + ", BitRate: " + bitRate + "kbps");
 
-        return mediaRecorder;
-    }
-
-    @Override
-    public void onDestroy() {
-        // TODO Auto-generated method stub
-        super.onDestroy();
-        Log.i(TAG, "Service onDestroy");
-        if(vd != null) {
-            vd.release();
-            vd = null;
-        }
-        if(mediaRecorder != null) {
-            mediaRecorder.setOnErrorListener(null);
-            mp.stop();
-            mediaRecorder.reset();
-        }
-        if(mp != null) {
-            mp.stop();
-            mp = null;
-        }
-    }
 
 
 }
