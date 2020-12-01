@@ -21,6 +21,7 @@ import android.os.IBinder;
 import android.os.Vibrator;
 import android.util.Log;
 import android.view.Surface;
+import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
@@ -48,7 +49,7 @@ public class RecorderService extends Service implements SensorEventListener {
     private Button button;
     private boolean isStarted = false;
     private boolean firstTime =true;
-
+    //private WindowManager windowManager = (WindowManager)getSystemService(Context.WINDOW_SERVICE);
 
     private SensorManager sm = null;
     private Sensor sensor =null;
@@ -57,7 +58,8 @@ public class RecorderService extends Service implements SensorEventListener {
     private float accCurrent;
     private float accLast;
     private boolean accb =true;
-
+    private View floatView;
+    //private WindowManager.LayoutParams lp;
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         sm  = (SensorManager)getSystemService(SENSOR_SERVICE);
@@ -70,6 +72,8 @@ public class RecorderService extends Service implements SensorEventListener {
         width = intent.getIntExtra("width",720);
         height = intent.getIntExtra("height",1280);
         density = intent.getIntExtra("density",0);
+        //floatView = intent.getParcelableExtra("floatView");
+        //lp = intent.getParcelableExtra("lp");
         mp = ((MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE)).getMediaProjection(resultCode, data);
         mediaRecorder = createMediaRecorder();
         vd = mp.createVirtualDisplay("recorder", width, height, density, DisplayManager.VIRTUAL_DISPLAY_FLAG_AUTO_MIRROR, mediaRecorder.getSurface(), null, null);
@@ -95,6 +99,13 @@ public class RecorderService extends Service implements SensorEventListener {
             mp.stop();
             mp = null;
         }
+        //windowManager.addView(floatView,lp);
+
+
+        Intent intent = new Intent();
+        intent.putExtra("Recreate", true);
+        intent.setAction("recreate.notice");
+        sendBroadcast(intent);
     }
 
 
@@ -154,10 +165,10 @@ public class RecorderService extends Service implements SensorEventListener {
 
         accLast = accCurrent;
         accCurrent = (float) Math.sqrt((double) (x * x + y * y + z * z));
-        float delta = accCurrent - accLast;
+        float delta = Math.abs( accCurrent - accLast);
         acc = acc * 0.9f + delta; // perform low-cut filter
 
-        if (delta > 3) {
+        if (delta > 2) {
             if(accb){
                 accb =false;
             }

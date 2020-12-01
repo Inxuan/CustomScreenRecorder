@@ -3,4 +3,5 @@
     <string name="StringButton">Button</string>
     <string name="my_video">My Video</string>
     <string name="home">Home</string>
+    <string name="startrecording">startRecording</string>
 </resources>

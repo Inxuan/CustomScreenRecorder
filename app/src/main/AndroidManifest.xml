@@ -26,6 +26,9 @@
             android:name=".RecorderService"
             android:foregroundServiceType="mediaProjection"
             />
+        <service
+            android:name=".CreateFloatViewService"
+            />
     </application>
 
 </manifest>
