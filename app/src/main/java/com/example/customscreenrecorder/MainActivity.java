@@ -8,14 +8,17 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.SensorManager;
 import android.hardware.display.VirtualDisplay;
+import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Parcelable;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -24,12 +27,21 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
 public class MainActivity extends AppCompatActivity {
+    private ImageView imageView;//声明ImageView对象
     private MediaProjectionManager manager;
     private MediaProjection mp;
     private VirtualDisplay vd;
@@ -175,6 +187,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void onClickVideo(View view) {
+    }
+
     public class NoticeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -200,6 +215,80 @@ public class MainActivity extends AppCompatActivity {
     }
     public void onClickView(View view) {
         setContentView(R.layout.view_video);
+        String path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)+ "/";
+        Log.e("Path",path+"");
+        List<String>  files = getFilesAllName(path);
+
+
+        for (String fileName:files) {
+            Log.e("Path",fileName+"");
+            getFirstframe(fileName);
+
+        }
+    }
+    private void getFirstframe(String path) {
+        imageView=(ImageView)findViewById(R.id.imageView);//获取布局管理器中的ImageView控件
+        MediaMetadataRetriever mmr = new MediaMetadataRetriever();//实例化MediaMetadataRetriever对象
+
+        File file = new File(path);//实例化File对象，文件路径为/storage/emulated/0/shipin.mp4 （手机根目录）
+        if (!file.exists()) {
+            Toast.makeText(MainActivity.this, "文件不存在", Toast.LENGTH_SHORT).show();
+        }
+        mmr.setDataSource(path);
+        Bitmap bitmap = mmr.getFrameAtTime(0);  //0表示首帧图片
+        mmr.release(); //释放MediaMetadataRetriever对象
+        if (bitmap != null) {
+            Toast.makeText(MainActivity.this, "获取视频缩略图成功", Toast.LENGTH_SHORT).show();
+            imageView.setImageBitmap(bitmap);//设置ImageView显示的图片
+            //存储媒体已经挂载，并且挂载点可读/写。
+            if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+                bitmap.recycle(); //回收bitmap
+                return;
+            }
+            try {
+                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
+                Date curDate = new Date(System.currentTimeMillis());
+                String picture_Name = formatter.format(curDate).replace(" ", "");//获取当前时间戳作为文件名称，避免同名
+                String framePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/framePicture/"; //图片保存文件夹
+                File frame_file = new File(framePath);
+                if (!frame_file.exists()) {  //如果路径不存在，就创建路径
+                    frame_file.mkdirs();
+                }
+                File picture_file = new File(framePath, picture_Name + ".jpg"); // 创建路径和文件名的File对象
+                FileOutputStream out = new FileOutputStream(picture_file);
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
+                out.flush();
+                out.close();   //注意关闭文件流
+                Toast.makeText(MainActivity.this, "保存图片成功！", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(MainActivity.this, "保存图片失败！" + e.getMessage().toString(), Toast.LENGTH_LONG).show();
+                e.printStackTrace();
+            }
+        } else {
+            Toast.makeText(MainActivity.this, "获取视频缩略图失败", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    public List<String> getFilesAllName(String path) {
+        File file=new File(path);
+        File[] files=file.listFiles();
+        if (files == null){Log.e("error","空目录");return null;}
+        List<String> s = new ArrayList<>();
+        for(int i =0;i<files.length;i++){
+            if(isVideo(files[i].getName())){
+                Log.e("Path",files[i].getName()+"");
+                s.add(path+files[i].getName());
+            }
+        }
+        return s;
+    }
+
+    private boolean isVideo(String name) {
+        if (name.endsWith( ".mp4" )) {
+            return true;
+        }
+        return false;
     }
 
     public WindowManager.LayoutParams getLayoutParams(){
