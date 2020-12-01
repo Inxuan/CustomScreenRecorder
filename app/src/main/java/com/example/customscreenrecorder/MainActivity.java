@@ -2,23 +2,21 @@ package com.example.customscreenrecorder;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.app.ActivityManager;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.hardware.SensorManager;
 import android.hardware.display.VirtualDisplay;
-import android.media.MediaMetadataRetriever;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.Parcelable;
 import android.util.DisplayMetrics;
 import android.util.Log;
@@ -27,12 +25,14 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.MediaController;
 import android.widget.Toast;
 import android.widget.VideoView;
-
+import android.graphics.Bitmap;
+import android.media.MediaMetadataRetriever;
+import android.os.Environment;
+import android.widget.ImageView;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
@@ -66,6 +66,10 @@ public class MainActivity extends AppCompatActivity {
     private MediaController mediaController;
     private final WindowManager.LayoutParams layoutParams=new WindowManager.LayoutParams();
     private NoticeReceiver noticeReceiver;
+
+
+
+
     //public AlertDialog.Builder builder = new AlertDialog.Builder(this);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -92,6 +96,7 @@ public class MainActivity extends AppCompatActivity {
         noticeReceiver = new NoticeReceiver();
         IntentFilter filter = new IntentFilter();
         filter.addAction("recreate.notice");
+        filter.addAction("quit.notice");
         registerReceiver(noticeReceiver, filter);
     }
 
@@ -126,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
 
 //        layoutParams.width*=0.9;
         //       layoutParams.height*=0.9;
-        TouchListener tl = new TouchListener(floatView,windowManager,layoutParams);
+        TouchListener tl = new TouchListener(floatView,windowManager,layoutParams,width,height,this);
 
 
 
@@ -187,18 +192,17 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
-    public void onClickVideo(View view) {
-    }
-
     public class NoticeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             String intentAction = intent.getAction();
             if (intentAction.equals("recreate.notice")) {
                 windowManager.addView(floatView,layoutParams);
-
                 isStarted=false;
 
+            }
+            else if(intentAction.equals("quit.notice")){
+                isStarted=false;
             }
         }
     }
@@ -207,7 +211,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        windowManager.removeView(floatView);
         unregisterReceiver(noticeReceiver);
+        System.exit(0);
     }
 
     public void onClickHome(View view) {
@@ -219,15 +225,28 @@ public class MainActivity extends AppCompatActivity {
         Log.e("Path",path+"");
         List<String>  files = getFilesAllName(path);
 
-
+        int index = 0;
         for (String fileName:files) {
             Log.e("Path",fileName+"");
-            getFirstframe(fileName);
+            getFirstframe(fileName,index);
+            index++;
 
         }
     }
-    private void getFirstframe(String path) {
-        imageView=(ImageView)findViewById(R.id.imageView);//获取布局管理器中的ImageView控件
+    private void getFirstframe(String path,int index) {
+        switch (index){
+            case 0: imageView=(ImageView)findViewById(R.id.imageView);//获取布局管理器中的ImageView控件
+                break;
+            case 1: imageView=(ImageView)findViewById(R.id.imageView2);//获取布局管理器中的ImageView控件
+                break;
+            case 2: imageView=(ImageView)findViewById(R.id.imageView3);//获取布局管理器中的ImageView控件
+                break;
+            case 3: imageView=(ImageView)findViewById(R.id.imageView4);//获取布局管理器中的ImageView控件
+                break;
+            default:imageView=(ImageView)findViewById(R.id.imageView);//获取布局管理器中的ImageView控件
+                break;
+        }
+
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();//实例化MediaMetadataRetriever对象
 
         File file = new File(path);//实例化File对象，文件路径为/storage/emulated/0/shipin.mp4 （手机根目录）
@@ -235,11 +254,10 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(MainActivity.this, "文件不存在", Toast.LENGTH_SHORT).show();
         }
         mmr.setDataSource(path);
-        Bitmap bitmap = mmr.getFrameAtTime(0);  //0表示首帧图片
+        Bitmap bitmap = mmr.getFrameAtTime(2000000 * 10, MediaMetadataRetriever.OPTION_CLOSEST);  //0表示首帧图片
         mmr.release(); //释放MediaMetadataRetriever对象
         if (bitmap != null) {
             imageView.setImageBitmap(bitmap);//设置ImageView显示的图片
-            //存储媒体已经挂载，并且挂载点可读/写。
         } else {
             Toast.makeText(MainActivity.this, "获取视频缩略图失败", Toast.LENGTH_SHORT).show();
         }
@@ -261,6 +279,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isVideo(String name) {
+        if(name.startsWith("."))return false;
         if (name.endsWith( ".mp4" )) {
             return true;
         }
@@ -269,5 +288,16 @@ public class MainActivity extends AppCompatActivity {
 
     public WindowManager.LayoutParams getLayoutParams(){
         return this.layoutParams;
+    }
+
+    public void goDestory(){
+        this.onDestroy();
+    }
+
+
+    public void goTaskTop(){
+        ActivityManager activityManager =(ActivityManager) getSystemService(ACTIVITY_SERVICE);
+        activityManager.moveTaskToFront(this.getTaskId(),0);
+        windowManager.removeView(floatView);
     }
 }
