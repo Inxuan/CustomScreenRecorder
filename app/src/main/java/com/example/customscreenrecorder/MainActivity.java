@@ -238,32 +238,8 @@ public class MainActivity extends AppCompatActivity {
         Bitmap bitmap = mmr.getFrameAtTime(0);  //0表示首帧图片
         mmr.release(); //释放MediaMetadataRetriever对象
         if (bitmap != null) {
-            Toast.makeText(MainActivity.this, "获取视频缩略图成功", Toast.LENGTH_SHORT).show();
             imageView.setImageBitmap(bitmap);//设置ImageView显示的图片
             //存储媒体已经挂载，并且挂载点可读/写。
-            if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-                bitmap.recycle(); //回收bitmap
-                return;
-            }
-            try {
-                SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd-HH-mm-ss");
-                Date curDate = new Date(System.currentTimeMillis());
-                String picture_Name = formatter.format(curDate).replace(" ", "");//获取当前时间戳作为文件名称，避免同名
-                String framePath = Environment.getExternalStorageDirectory().getAbsolutePath() + "/framePicture/"; //图片保存文件夹
-                File frame_file = new File(framePath);
-                if (!frame_file.exists()) {  //如果路径不存在，就创建路径
-                    frame_file.mkdirs();
-                }
-                File picture_file = new File(framePath, picture_Name + ".jpg"); // 创建路径和文件名的File对象
-                FileOutputStream out = new FileOutputStream(picture_file);
-                bitmap.compress(Bitmap.CompressFormat.JPEG, 100, out);
-                out.flush();
-                out.close();   //注意关闭文件流
-                Toast.makeText(MainActivity.this, "保存图片成功！", Toast.LENGTH_SHORT).show();
-            } catch (Exception e) {
-                Toast.makeText(MainActivity.this, "保存图片失败！" + e.getMessage().toString(), Toast.LENGTH_LONG).show();
-                e.printStackTrace();
-            }
         } else {
             Toast.makeText(MainActivity.this, "获取视频缩略图失败", Toast.LENGTH_SHORT).show();
         }
