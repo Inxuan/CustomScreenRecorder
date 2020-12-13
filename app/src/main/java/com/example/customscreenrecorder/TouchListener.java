@@ -1,22 +1,10 @@
 package com.example.customscreenrecorder;
 
-import android.app.Activity;
-import android.app.ActivityManager;
-import android.app.Service;
-import android.content.Context;
-import android.content.Intent;
-import android.os.IBinder;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.LinearLayout;
-
-import androidx.annotation.Nullable;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
-import static android.content.Context.ACTIVITY_SERVICE;
 
 public class TouchListener implements View.OnTouchListener {
     int lastX = 0;
@@ -27,20 +15,24 @@ public class TouchListener implements View.OnTouchListener {
     int paramY = 0;
 
     private View ll;
+    private View floatView2;
     private FloatingActionButton fab;
     private WindowManager.LayoutParams lp;
+    private WindowManager.LayoutParams lp2;
     private WindowManager windowManager;
     private int screenWidth;
     private int screenHeight;
     private MainActivity mainActivity;
 
-    public TouchListener(View LinearLayout,WindowManager windowManager, WindowManager.LayoutParams lp,int screenWidth,int screenHeight, MainActivity mainActivity) {
+    public TouchListener(View LinearLayout,View floatView2,WindowManager windowManager, WindowManager.LayoutParams lp,WindowManager.LayoutParams lp2,int screenWidth,int screenHeight, MainActivity mainActivity) {
 
         this.windowManager  = windowManager;
         FloatingActionButton fab =(FloatingActionButton)((android.widget.LinearLayout)LinearLayout).getChildAt(0);
         this.fab = fab;
         this.ll = LinearLayout;
+        this.floatView2 = floatView2;
         this.lp =lp;
+        this.lp2 = lp2;
         this.screenWidth = screenWidth;
         this.screenHeight=screenHeight;
         this.mainActivity = mainActivity;
@@ -60,6 +52,7 @@ public class TouchListener implements View.OnTouchListener {
                 originY= lastY;
                 paramX = lp.x;
                 paramY = lp.y;
+                windowManager.addView(floatView2,lp2);
                 break;
             case MotionEvent.ACTION_MOVE:
                 int dx = (int) motionEvent.getRawX() - lastX;
@@ -91,15 +84,16 @@ public class TouchListener implements View.OnTouchListener {
                 windowManager.updateViewLayout(ll, lp);
                 break;
             case MotionEvent.ACTION_UP:
+                windowManager.removeView(floatView2);
                 int distance = Math.abs((int) motionEvent.getRawX() - originX) + Math.abs((int)motionEvent.getRawY() - originY);
                 //Log.e("DIstance",distance+"");
                 //Log.e("l",lp.x+"");
                 //Log.e("t",lp.y+"");
-                if(lp.y<=-880){
-                    mainActivity.goDestory();
+                if(lp.y<=-800){
+                    mainActivity.goDestroy();
                     //Log.e("aa","");
                 }
-                if(lp.y>=900){
+                if(lp.y>=800){
                     mainActivity.goTaskTop();
                 }
                 if (Math.abs(distance)<5) {

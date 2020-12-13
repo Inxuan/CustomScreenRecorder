@@ -51,6 +51,9 @@ public class RecorderService extends Service implements SensorEventListener {
     private boolean firstTime =true;
     //private WindowManager windowManager = (WindowManager)getSystemService(Context.WINDOW_SERVICE);
 
+
+    private String filePath;
+
     private SensorManager sm = null;
     private Sensor sensor =null;
     private Vibrator vb = null;
@@ -62,6 +65,10 @@ public class RecorderService extends Service implements SensorEventListener {
     //private WindowManager.LayoutParams lp;
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+        accb =true;
+        acc= 0 ;
+        accCurrent=0;
+        accLast=0;
         sm  = (SensorManager)getSystemService(SENSOR_SERVICE);
         vb = (Vibrator)getSystemService(Service.VIBRATOR_SERVICE);
         sensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -104,6 +111,7 @@ public class RecorderService extends Service implements SensorEventListener {
 
         Intent intent = new Intent();
         intent.putExtra("Recreate", true);
+        intent.putExtra("filePath",filePath);
         intent.setAction("recreate.notice");
         sendBroadcast(intent);
     }
@@ -123,7 +131,8 @@ public class RecorderService extends Service implements SensorEventListener {
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
         mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);  //after setOutputFormat()
         mediaRecorder.setVideoSize(width, height);  //after setVideoSource(), setOutFormat()
-        mediaRecorder.setOutputFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) + "/" + videoQuality + curTime + ".mp4");
+        filePath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES) + "/" + videoQuality + curTime + ".mp4";
+        mediaRecorder.setOutputFile(filePath);
 
         //if(isAudio) mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);  //after setOutputFormat()
         int bitRate;

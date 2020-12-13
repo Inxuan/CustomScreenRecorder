@@ -1,6 +1,7 @@
 package com.example.customscreenrecorder;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
 import android.app.ActivityManager;
 import android.app.AlertDialog;
@@ -12,19 +13,26 @@ import android.content.IntentFilter;
 import android.graphics.PixelFormat;
 import android.hardware.SensorManager;
 import android.hardware.display.VirtualDisplay;
+import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.media.projection.MediaProjection;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Parcelable;
+import android.text.Layout;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
+import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.GridView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.MediaController;
 import android.widget.Toast;
@@ -38,6 +46,7 @@ import java.io.FileOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -59,21 +68,29 @@ public class MainActivity extends AppCompatActivity {
     private boolean firstTime =true;
     private Button window;
     private View floatView;
+    private View floatView2;
     private WindowManager windowManager;
     private SensorManager sensor;
     private VideoView videoView;
     private Button btn_start,btn_end;
     private MediaController mediaController;
-    private final WindowManager.LayoutParams layoutParams=new WindowManager.LayoutParams();
+    private final WindowManager.LayoutParams layoutParams = new WindowManager.LayoutParams();
+    private final WindowManager.LayoutParams layoutParams2 =new WindowManager.LayoutParams();
     private NoticeReceiver noticeReceiver;
-
-
+    private ArrayList<Bitmap> images = new ArrayList<Bitmap>();
+    private HashMap<ImageView,String> map = new HashMap<ImageView,String>();
+    private ArrayList<String> paths = new ArrayList<String>();
+    private boolean floatButtonIsShowing = false;
+    private VideoView playView;
+    private VideoView playView2;
+    private String currentPath;
 
 
     //public AlertDialog.Builder builder = new AlertDialog.Builder(this);
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         //get info of screen;
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         width = metrics.widthPixels;
@@ -93,6 +110,7 @@ public class MainActivity extends AppCompatActivity {
         //button = (Button)findViewById(R.id.bt_play);
         //setContentView(R.layout.activity_main);
         //windowManager.removeView(floatView);
+        //floatButtonIsShowing=false;
         noticeReceiver = new NoticeReceiver();
         IntentFilter filter = new IntentFilter();
         filter.addAction("recreate.notice");
@@ -106,42 +124,112 @@ public class MainActivity extends AppCompatActivity {
         //设置类型
         if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
             layoutParams.type=WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+            layoutParams2.type=WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
         }else {
             layoutParams.type=WindowManager.LayoutParams.TYPE_PHONE;
+            layoutParams2.type=WindowManager.LayoutParams.TYPE_PHONE;
         }
         //设置行为选项
         layoutParams.flags=WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
+        layoutParams2.flags=WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL | WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
         //设置悬浮窗的显示位置
         layoutParams.gravity= Gravity.LEFT;
+        layoutParams2.gravity= Gravity.LEFT;
         //设置x周的偏移量
         layoutParams.x=0;
+        layoutParams2.x=0;
         //设置y轴的偏移量
         layoutParams.y=0;
+        layoutParams2.y=0;
 
         //如果悬浮窗图片为透明图片，需要设置该参数为PixelFormat.RGBA_8888
         layoutParams.format= PixelFormat.RGBA_8888;
+        layoutParams2.format= PixelFormat.RGBA_8888;
         //设置悬浮窗的宽度
         layoutParams.width=24*5 * (density / 160);
-
+        layoutParams2.width= width;
         layoutParams.height=24*5 * (density / 160);
+        layoutParams2.height= height ;
 
 
+
+        floatView2 = LayoutInflater.from(this).inflate(R.layout.window2,null);
         floatView = LayoutInflater.from(this).inflate(R.layout.window,null);
+
+
+
+
+
+
         //加载显示悬浮窗
 
 //        layoutParams.width*=0.9;
         //       layoutParams.height*=0.9;
-        TouchListener tl = new TouchListener(floatView,windowManager,layoutParams,width,height,this);
+        TouchListener tl = new TouchListener(floatView,floatView2,windowManager,layoutParams,layoutParams2,width,height,this);
 
-
-
-        windowManager.addView(floatView,layoutParams);
+        addBackFloatWindow();
     }
+
+
+
+
+
 
     public void onClick2(View view){
         moveTaskToBack(true);
+        if(!floatButtonIsShowing) {
+            createWindow();
+        }
+    }
 
-        createWindow();
+    public void onClickSave(View view){
+        if(view.getId()==R.id.save_button) {
+            playView.stopPlayback();
+            playView.setOnCompletionListener(null);
+            playView.setOnPreparedListener(null);
+            setContentView(R.layout.activity_main);
+            moveTaskToBack(true);
+            addBackFloatWindow();
+            isStarted = false;
+        }
+        else if(view.getId()==R.id.cancel_button){
+            if(currentPath!=null) {
+                File f = new File(currentPath);
+                if (f.delete()) {
+                    Toast.makeText(MainActivity.this, "delete successfully", Toast.LENGTH_SHORT).show();
+
+                } else {
+                    Toast.makeText(MainActivity.this, "fail to delete", Toast.LENGTH_SHORT).show();
+                }
+                playView.stopPlayback();
+                playView.setOnCompletionListener(null);
+                playView.setOnPreparedListener(null);
+                setContentView(R.layout.activity_main);
+                moveTaskToBack(true);
+                addBackFloatWindow();
+                isStarted = false;
+            }
+        }
+        else if(view.getId()==R.id.cancel_button2){
+            playView2.stopPlayback();
+            playView2.setOnCompletionListener(null);
+            playView2.setOnPreparedListener(null);
+            setContentView(R.layout.view_video);
+            onClickView(null);
+        }else if(view.getId()==R.id.delete_button){
+            File f = new File(currentPath);
+            if(f.delete()){
+                Toast.makeText(MainActivity.this, "delete successfully", Toast.LENGTH_SHORT).show();
+
+            }else{
+                Toast.makeText(MainActivity.this, "fail to delete", Toast.LENGTH_SHORT).show();
+            }
+            playView2.stopPlayback();
+            playView2.setOnCompletionListener(null);
+            playView2.setOnPreparedListener(null);
+            setContentView(R.layout.view_video);
+            onClickView(null);
+        }
     }
 
 
@@ -150,7 +238,7 @@ public class MainActivity extends AppCompatActivity {
             Log.i(TAG, "start");
             //((Button)view).setText("Stop");
             windowManager.removeView(floatView);
-
+            floatButtonIsShowing = false;
             manager = (MediaProjectionManager) getSystemService(MEDIA_PROJECTION_SERVICE);
             Intent captureIntent = manager.createScreenCaptureIntent();
             startActivityForResult(captureIntent, RECORD_CODE);
@@ -192,13 +280,106 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+
+
+
     public class NoticeReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
             String intentAction = intent.getAction();
             if (intentAction.equals("recreate.notice")) {
-                windowManager.addView(floatView,layoutParams);
-                isStarted=false;
+                ActivityManager activityManager =(ActivityManager) getSystemService(ACTIVITY_SERVICE);
+                activityManager.moveTaskToFront(getTaskId(),0);
+                currentPath = intent.getStringExtra("filePath");
+                setContentView(R.layout.playview);
+                playView =(VideoView)findViewById(R.id.play_view);
+                playView.setVideoPath(currentPath);
+                playView.start();
+                playView.setOnCompletionListener(new MediaPlayer.OnCompletionListener()
+                {
+                    @Override
+                    public void onCompletion(MediaPlayer mp)
+                    {
+                        //播放结束后的动作
+
+
+                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                        //builder.setTitle("title：");
+                        builder.setMessage("Do you want to save this video?");
+                        builder.setIcon(R.mipmap.ic_launcher);
+                        builder.setCancelable(false);            //点击对话框以外的区域是否让对话框消失
+
+                        //设置正面按钮
+                        builder.setPositiveButton("No", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                //Toast.makeText(MainActivity.this, "你点击了确定", Toast.LENGTH_SHORT).show();
+                                File f = new File(currentPath);
+                                if(f.delete()){
+                                    Toast.makeText(MainActivity.this, "delete successfully", Toast.LENGTH_SHORT).show();
+
+                                }else{
+                                    Toast.makeText(MainActivity.this, "fail to delete", Toast.LENGTH_SHORT).show();
+                                }
+                                dialog.dismiss();
+                                playView.stopPlayback();
+                                playView.setOnCompletionListener(null);
+                                playView.setOnPreparedListener(null);
+                                setContentView(R.layout.activity_main);
+                                moveTaskToBack(true);
+                                addBackFloatWindow();
+                                isStarted=false;
+                            }
+                        });
+                        //设置反面按钮
+                        builder.setNegativeButton("Yes", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                //Toast.makeText(MainActivity.this, "你点击了取消", Toast.LENGTH_SHORT).show();
+
+                                dialog.dismiss();
+                                playView.stopPlayback();
+                                playView.setOnCompletionListener(null);
+                                playView.setOnPreparedListener(null);
+                                setContentView(R.layout.activity_main);
+                                moveTaskToBack(true);
+                                addBackFloatWindow();
+                                isStarted=false;
+                            }
+                        });
+                        //设置中立按钮
+                        builder.setNeutralButton("Replay", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+
+                                dialog.dismiss();
+                                Toast.makeText(MainActivity.this, "Start replay", Toast.LENGTH_SHORT).show();
+                                playView.start();
+                            }
+                        });
+
+
+                        AlertDialog dialog = builder.create();      //创建AlertDialog对象
+                        //对话框显示的监听事件
+                        dialog.setOnShowListener(new DialogInterface.OnShowListener() {
+                            @Override
+                            public void onShow(DialogInterface dialog) {
+                                Log.e(TAG, "对话框显示了");
+                            }
+                        });
+                        //对话框消失的监听事件
+                        dialog.setOnCancelListener(new DialogInterface.OnCancelListener() {
+                            @Override
+                            public void onCancel(DialogInterface dialog) {
+                                Log.e(TAG, "对话框消失了");
+                            }
+                        });
+                        dialog.show();
+
+
+                    }
+                });
+
 
             }
             else if(intentAction.equals("quit.notice")){
@@ -207,12 +388,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void addBackFloatWindow(){
+        if(!floatButtonIsShowing){
+            windowManager.addView(floatView,layoutParams);
+            floatButtonIsShowing= true;
+        }
+    }
+
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         windowManager.removeView(floatView);
+        floatButtonIsShowing =false;
         unregisterReceiver(noticeReceiver);
+        //if(videoView!=null){
+        //    videoView.suspend();
+        //}
         System.exit(0);
     }
 
@@ -220,46 +412,48 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
     }
     public void onClickView(View view) {
+        images=new ArrayList<Bitmap>() ;
+        map = new HashMap<ImageView,String>();
+        paths = new ArrayList<String>();
         setContentView(R.layout.view_video);
         String path = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES)+ "/";
         Log.e("Path",path+"");
         List<String>  files = getFilesAllName(path);
-
         int index = 0;
         for (String fileName:files) {
             Log.e("Path",fileName+"");
             getFirstframe(fileName,index);
             index++;
-
         }
+        GridView gridView = (GridView) findViewById(R.id.gridView);
+        gridView.setAdapter(new ImageAdapter(this));
     }
     private void getFirstframe(String path,int index) {
-        switch (index){
-            case 0: imageView=(ImageView)findViewById(R.id.imageView);//获取布局管理器中的ImageView控件
-                break;
-            case 1: imageView=(ImageView)findViewById(R.id.imageView2);//获取布局管理器中的ImageView控件
-                break;
-            case 2: imageView=(ImageView)findViewById(R.id.imageView3);//获取布局管理器中的ImageView控件
-                break;
-            case 3: imageView=(ImageView)findViewById(R.id.imageView4);//获取布局管理器中的ImageView控件
-                break;
-            default:imageView=(ImageView)findViewById(R.id.imageView);//获取布局管理器中的ImageView控件
-                break;
-        }
+/*
+        imageView = new ImageView(this);
+        LinearLayout     view2 = findViewById(R.id.container);
+        LinearLayout.LayoutParams params = (LinearLayout.LayoutParams)view2.getLayoutParams();
+        params.setMargins(50,50,50,50);
+        view2.setLayoutParams(params);
+*/
+
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();//实例化MediaMetadataRetriever对象
 
         File file = new File(path);//实例化File对象，文件路径为/storage/emulated/0/shipin.mp4 （手机根目录）
         if (!file.exists()) {
-            Toast.makeText(MainActivity.this, "文件不存在", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "file does not exist", Toast.LENGTH_SHORT).show();
         }
         mmr.setDataSource(path);
         Bitmap bitmap = mmr.getFrameAtTime(2000000 * 10, MediaMetadataRetriever.OPTION_CLOSEST);  //0表示首帧图片
         mmr.release(); //释放MediaMetadataRetriever对象
         if (bitmap != null) {
-            imageView.setImageBitmap(bitmap);//设置ImageView显示的图片
+            //imageView.setImageBitmap(bitmap);//设置ImageView显示的图片
+            //view2.addView(imageView);
+            images.add(bitmap);
+            paths.add(path);
         } else {
-            Toast.makeText(MainActivity.this, "获取视频缩略图失败", Toast.LENGTH_SHORT).show();
+            Toast.makeText(MainActivity.this, "fail to load bitmap", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -267,7 +461,7 @@ public class MainActivity extends AppCompatActivity {
     public List<String> getFilesAllName(String path) {
         File file=new File(path);
         File[] files=file.listFiles();
-        if (files == null){Log.e("error","空目录");return null;}
+        if (files == null){Log.e("error","empty path");return null;}
         List<String> s = new ArrayList<>();
         for(int i =0;i<files.length;i++){
             if(isVideo(files[i].getName())){
@@ -290,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
         return this.layoutParams;
     }
 
-    public void goDestory(){
+    public void goDestroy(){
         this.onDestroy();
     }
 
@@ -299,5 +493,101 @@ public class MainActivity extends AppCompatActivity {
         ActivityManager activityManager =(ActivityManager) getSystemService(ACTIVITY_SERVICE);
         activityManager.moveTaskToFront(this.getTaskId(),0);
         windowManager.removeView(floatView);
+        floatButtonIsShowing=false;
     }
+
+
+    private class ImageAdapter extends BaseAdapter {
+
+        private Context mContext;
+
+        public ImageAdapter(Context context) {
+            this.mContext = context;
+        }
+
+
+        @Override
+        public int getCount() {
+            return images.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return null;
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ImageView imageView;
+            if (convertView == null) {
+                imageView = new ImageView(mContext);
+
+                imageView.setLayoutParams(new GridView.LayoutParams(141*density/160, 259*density/160));//设置ImageView宽高
+                imageView.setOnClickListener(
+                        new View.OnClickListener() {
+                            public void onClick(View v) {
+                                //Log.i(TAG, map.get(v));
+                                currentPath = map.get(v);
+                                setContentView(R.layout.playview2);
+                                playView2 =(VideoView)findViewById(R.id.review_view);
+                                playView2.setVideoPath(currentPath);
+                                playView2.start();
+                                playView2.setOnCompletionListener(new MediaPlayer.OnCompletionListener()
+                                {
+                                    @Override
+                                    public void onCompletion(MediaPlayer mp)
+                                    {
+                                        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+                                        //builder.setTitle("title：");
+                                        builder.setMessage("Do you want to replay this video?");
+                                        builder.setIcon(R.mipmap.ic_launcher);
+                                        builder.setCancelable(false);
+
+
+                                        builder.setPositiveButton("No", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                dialog.dismiss();
+                                                playView2.stopPlayback();
+                                                playView2.setOnCompletionListener(null);
+                                                playView2.setOnPreparedListener(null);
+                                                setContentView(R.layout.view_video);
+                                                }
+                                        });
+
+                                        builder.setNeutralButton("Yes", new DialogInterface.OnClickListener() {
+                                            @Override
+                                            public void onClick(DialogInterface dialog, int which) {
+                                                dialog.dismiss();
+                                                Toast.makeText(MainActivity.this, "Start replay", Toast.LENGTH_SHORT).show();
+                                                playView2.start();
+                                            }
+                                        });
+
+                                        AlertDialog dialog = builder.create();
+                                        dialog.show();
+                                    }
+                                });
+                            }
+                        }
+                );
+            } else {
+                imageView = (ImageView) convertView;
+            }
+
+            imageView.setImageBitmap(images.get(position));
+            map.put(imageView,paths.get(position));
+            return imageView;
+        }
+
+
+        class ViewHolder {
+            ImageView itemImg;
+        }
+    }
+
 }
