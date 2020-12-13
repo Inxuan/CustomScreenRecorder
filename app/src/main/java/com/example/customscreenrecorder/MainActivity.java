@@ -182,6 +182,24 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void onClick3(View view){
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+        builder.setTitle("3 simple steps to records");
+        builder.setMessage("1. Click on start button to create a floating button\n2. Click on floating button to start recording\n3.Give app permission when the system is asking\n\nHow to stop recording:\n Just shake the device");
+        builder.setIcon(R.mipmap.ic_launcher);
+        builder.setCancelable(true);            //点击对话框以外的区域是否让对话框消失
+
+        //设置正面按钮
+        builder.setPositiveButton("back", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.dismiss();
+            }
+        });
+        AlertDialog dialog = builder.create();      //创建AlertDialog对象
+        dialog.show();
+    }
+
     public void onClickSave(View view){
         if(view.getId()==R.id.save_button) {
             playView.stopPlayback();
