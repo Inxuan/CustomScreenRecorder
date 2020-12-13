@@ -56,21 +56,25 @@ public class RecorderService extends Service implements SensorEventListener {
 
     private SensorManager sm = null;
     private Sensor sensor =null;
-    private Vibrator vb = null;
-    private float acc;
-    private float accCurrent;
-    private float accLast;
-    private boolean accb =true;
-    private View floatView;
+
+    private long lastUpdate = 0;
+    private float last_x, last_y, last_z;
+    private static final int SHAKE_THRESHOLD = 600;
+
+
+
     //private WindowManager.LayoutParams lp;
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        accb =true;
-        acc= 0 ;
-        accCurrent=0;
-        accLast=0;
+
+        lastUpdate = 0;
+        last_x=0;
+        last_y=0;
+        last_z=0;
+
+
         sm  = (SensorManager)getSystemService(SENSOR_SERVICE);
-        vb = (Vibrator)getSystemService(Service.VIBRATOR_SERVICE);
+
         sensor = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         sm.registerListener(this,sensor,SensorManager.SENSOR_DELAY_UI, new Handler());
 
@@ -164,7 +168,52 @@ public class RecorderService extends Service implements SensorEventListener {
     }
 
     @Override
-    public void onSensorChanged(SensorEvent event) {
+    public void onSensorChanged(SensorEvent sensorEvent) {
+        Sensor mySensor = sensorEvent.sensor;
+
+        if (mySensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            float x = sensorEvent.values[0];
+            float y = sensorEvent.values[1];
+            float z = sensorEvent.values[2];
+
+            long curTime = System.currentTimeMillis();
+
+            if ((curTime - lastUpdate) > 100) {
+                long diffTime = (curTime - lastUpdate);
+                lastUpdate = curTime;
+
+                float speed = Math.abs(x + y + z - last_x - last_y - last_z)/ diffTime * 10000;
+
+                if (speed > SHAKE_THRESHOLD) {
+                    Log.i(TAG, "detect shaking");
+                    sm.unregisterListener(this);
+                    this.onDestroy();
+                }
+
+                last_x = x;
+                last_y = y;
+                last_z = z;
+            }
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/*
+
+    {
         // TODO Auto-generated method stub
         int sensorType = event.sensor.getType();
         float[]values = event.values;
@@ -173,7 +222,7 @@ public class RecorderService extends Service implements SensorEventListener {
         float z = event.values[2];
 
         accLast = accCurrent;
-        accCurrent = (float) Math.sqrt((double) (x * x + y * y + z * z));
+        accCurrent = (float) Math.sqrt((double) (x * x  + y * y + z * z));
         float delta = Math.abs( accCurrent - accLast);
         acc = acc * 0.9f + delta; // perform low-cut filter
 
@@ -189,7 +238,7 @@ public class RecorderService extends Service implements SensorEventListener {
 
         }
     }
-
+*/
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
